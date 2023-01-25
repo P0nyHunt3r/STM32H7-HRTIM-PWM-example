@@ -1,0 +1,3 @@
+[submodule "Drivers/mcu_disp"]
+	path = Drivers/mcu_disp
+	url = https://github.com/P0nyL0v3r/mcu_disp.git

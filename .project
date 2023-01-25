@@ -30,11 +30,4 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>Drivers/mcu_disp</name>
-			<type>2</type>
-			<location>D:/Projects/c_cpp/lib/mcu_disp</location>
-		</link>
-	</linkedResources>
 </projectDescription>
