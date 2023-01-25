@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "hrtim.h"
 #include "quadspi.h"
 #include "spi.h"
 #include "tim.h"
@@ -25,7 +26,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-//#include "disp.h"
+#include "stdbool.h"
+#include "stdio.h"
 #include "st7735/st7735.h"
 /* USER CODE END Includes */
 
@@ -38,6 +40,14 @@
 /* USER CODE BEGIN PD */
 #define LCD_Brightness_timer &htim1
 #define LCD_Brightness_channel TIM_CHANNEL_2
+typedef enum
+{
+  PWM_10_MHZ = 0,
+  PWM_20_MHZ,
+  PWM_30_MHZ,
+  PWM_40_MHZ,
+  PWM_60_MHZ,
+}pwm_freq_t;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -69,6 +79,52 @@ uint32_t LCD_GetBrightness(void)
 {
     return __HAL_TIM_GetCompare(LCD_Brightness_timer, LCD_Brightness_channel);
 }
+bool read_btn()
+{
+  return HAL_GPIO_ReadPin(BTN_K1_GPIO_Port, BTN_K1_Pin) == GPIO_PIN_SET? true:false;
+}
+void update_pwm_freq(pwm_freq_t new_pwm_freq)
+{
+  int freqMHz = 0;
+  uint32_t period = 0;
+  char str[64];
+
+  HAL_HRTIM_WaveformOutputStop(&hhrtim, HRTIM_OUTPUT_TC1);
+  HAL_HRTIM_WaveformCounterStop(&hhrtim, HRTIM_TIMERID_TIMER_C);
+
+  switch(new_pwm_freq)
+  {
+    case PWM_10_MHZ:
+      freqMHz = 10;
+      period = 24;
+    break;
+    case PWM_20_MHZ:
+      freqMHz = 20;
+      period = 12;
+    break;
+    case PWM_30_MHZ:
+      freqMHz = 30;
+      period = 8;
+    break;
+    case PWM_40_MHZ:
+      freqMHz = 40;
+      period = 6;
+    break;
+    case PWM_60_MHZ:
+      freqMHz = 60;
+      period = 4;
+    break;
+  }
+
+  __HAL_HRTIM_SETPERIOD(&hhrtim,HRTIM_TIMERINDEX_TIMER_C,period);
+  __HAL_HRTIM_SETCOMPARE(&hhrtim,HRTIM_TIMERINDEX_TIMER_C,HRTIM_COMPAREUNIT_1,period/2);
+
+  HAL_HRTIM_WaveformOutputStart(&hhrtim, HRTIM_OUTPUT_TC1);
+  HAL_HRTIM_WaveformCounterStart(&hhrtim, HRTIM_TIMERID_TIMER_C);
+
+  sprintf(str,"freq: %02d MHz",freqMHz);
+  ST7735_WriteString(0, 0, str, Font_11x18, DISP_Black, DISP_Pink);
+}
 /* USER CODE END 0 */
 
 /**
@@ -78,7 +134,7 @@ uint32_t LCD_GetBrightness(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  pwm_freq_t pwm_freq = PWM_10_MHZ;
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
@@ -105,19 +161,35 @@ int main(void)
   MX_QUADSPI_Init();
   MX_SPI4_Init();
   MX_TIM1_Init();
+  MX_HRTIM_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIMEx_PWMN_Start(LCD_Brightness_timer,LCD_Brightness_channel);
   LCD_SetBrightness(0);
 
   ST7735_Init();
   ST7735_FillScreen(DISP_Pink);
-  ST7735_WriteString(0, 0, "test", Font_11x18, DISP_Black, DISP_Pink);
+
+  update_pwm_freq(pwm_freq);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    int i = 0;
+    while(read_btn())
+    {
+      HAL_Delay(1);
+      i++;
+    }
+    if(i>50)
+    {
+      if(pwm_freq == PWM_60_MHZ)
+        pwm_freq = PWM_10_MHZ;
+      else
+        pwm_freq++;
+      update_pwm_freq(pwm_freq);
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
