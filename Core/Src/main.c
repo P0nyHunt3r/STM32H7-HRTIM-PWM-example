@@ -89,6 +89,7 @@ void update_pwm_freq(pwm_freq_t new_pwm_freq)
   uint32_t period = 0;
   char str[64];
 
+  //disable PWM output
   HAL_HRTIM_WaveformOutputStop(&hhrtim, HRTIM_OUTPUT_TC1);
   HAL_HRTIM_WaveformCounterStop(&hhrtim, HRTIM_TIMERID_TIMER_C);
 
@@ -116,12 +117,15 @@ void update_pwm_freq(pwm_freq_t new_pwm_freq)
     break;
   }
 
+  //changing PWM config
   __HAL_HRTIM_SETPERIOD(&hhrtim,HRTIM_TIMERINDEX_TIMER_C,period);
   __HAL_HRTIM_SETCOMPARE(&hhrtim,HRTIM_TIMERINDEX_TIMER_C,HRTIM_COMPAREUNIT_1,period/2);
 
+  //enable PWM output
   HAL_HRTIM_WaveformOutputStart(&hhrtim, HRTIM_OUTPUT_TC1);
   HAL_HRTIM_WaveformCounterStart(&hhrtim, HRTIM_TIMERID_TIMER_C);
 
+  //show freq on display
   sprintf(str,"freq: %02d MHz",freqMHz);
   ST7735_WriteString(0, 0, str, Font_11x18, DISP_Black, DISP_Pink);
 }
@@ -134,7 +138,7 @@ void update_pwm_freq(pwm_freq_t new_pwm_freq)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  pwm_freq_t pwm_freq = PWM_10_MHZ;
+  pwm_freq_t pwm_freq = PWM_10_MHZ;  //default freq
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
@@ -163,12 +167,14 @@ int main(void)
   MX_TIM1_Init();
   MX_HRTIM_Init();
   /* USER CODE BEGIN 2 */
+  //start LCD PWM
   HAL_TIMEx_PWMN_Start(LCD_Brightness_timer,LCD_Brightness_channel);
   LCD_SetBrightness(0);
 
   ST7735_Init();
   ST7735_FillScreen(DISP_Pink);
 
+  //update timer config and enable PWM
   update_pwm_freq(pwm_freq);
   /* USER CODE END 2 */
 
@@ -177,6 +183,7 @@ int main(void)
   while (1)
   {
     int i = 0;
+    //handling button press cycle
     while(read_btn())
     {
       HAL_Delay(1);
